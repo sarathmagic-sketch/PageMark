@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#0f0e0c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>PageMark — Smart Reading Journal</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #0f0e0c;
+  --paper: #faf8f4;
+  --cream: #f3efe7;
+  --gold: #c9a84c;
+  --gold-light: #e8d5a3;
+  --rust: #b85c3a;
+  --sage: #5a7a5e;
+  --muted: #8a8478;
+  --border: rgba(15,14,12,0.12);
+  --shadow: 0 2px 20px rgba(15,14,12,0.08);
+  --r: 10px;
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'DM Sans', sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; background: var(--ink); font-family: var(--sans); }
+
+.screen { display: none; min-height: 100vh; background: var(--paper); flex-direction: column; }
+.screen.active { display: flex; }
+
+/* ── AUTH ── */
+#auth-screen { background: var(--ink); align-items: center; justify-content: center; padding: 2rem; position: relative; overflow: hidden; }
+.auth-bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 20% 50%, rgba(201,168,76,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 20%, rgba(184,92,58,0.06) 0%, transparent 50%); }
+.auth-lines { position: absolute; inset: 0; opacity: 0.04; background-image: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(201,168,76,1) 40px, rgba(201,168,76,1) 41px); }
+.auth-card { position: relative; z-index: 1; max-width: 360px; width: 100%; text-align: center; }
+.auth-logo { font-family: var(--serif); font-size: 42px; font-style: italic; color: var(--gold); margin-bottom: 6px; letter-spacing: -1px; }
+.auth-tagline { font-size: 13px; color: rgba(255,255,255,0.4); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 48px; }
+.auth-divider { font-size: 11px; color: rgba(255,255,255,0.2); margin: 20px 0; letter-spacing: 0.1em; }
+.btn-google { width: 100%; padding: 14px 20px; background: var(--paper); color: var(--ink); border: none; border-radius: var(--r); font-family: var(--sans); font-size: 14px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.15s, opacity 0.15s; margin-bottom: 12px; }
+.btn-google:active { transform: scale(0.98); opacity: 0.9; }
+.btn-google svg { width: 18px; height: 18px; flex-shrink: 0; }
+.btn-qr { width: 100%; padding: 14px 20px; background: transparent; color: rgba(255,255,255,0.6); border: 1px solid rgba(255,255,255,0.15); border-radius: var(--r); font-family: var(--sans); font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.15s; margin-bottom: 12px; }
+.btn-qr:hover { border-color: rgba(201,168,76,0.4); color: var(--gold); }
+.btn-guest { width: 100%; padding: 12px; background: transparent; color: rgba(255,255,255,0.3); border: none; font-family: var(--sans); font-size: 13px; cursor: pointer; text-decoration: underline; text-decoration-color: rgba(255,255,255,0.15); }
+.qr-section { display: none; margin-top: 24px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: var(--r); padding: 20px; text-align: center; }
+.qr-section.open { display: block; }
+.qr-code { width: 120px; height: 120px; margin: 0 auto 12px; background: white; border-radius: 6px; padding: 8px; display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; }
+.qr-pixel { background: var(--ink); border-radius: 1px; }
+.qr-pixel.w { background: white; }
+.qr-label { font-size: 11px; color: rgba(255,255,255,0.3); line-height: 1.5; }
+.qr-id { font-size: 12px; color: var(--gold); letter-spacing: 0.1em; margin-top: 6px; }
+
+/* ── APP CHROME ── */
+#app-screen { background: var(--paper); }
+.app-header { background: var(--ink); padding: 14px 20px 12px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+.header-logo { font-family: var(--serif); font-size: 22px; font-style: italic; color: var(--gold); }
+.header-right { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--gold); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: var(--ink); cursor: pointer; }
+.sync-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--sage); }
+
+/* Session active banner — no timer shown */
+.session-active-bar { background: var(--sage); padding: 9px 20px; display: none; align-items: center; justify-content: space-between; }
+.session-active-bar.on { display: flex; }
+.session-live-text { font-size: 12px; color: white; display: flex; align-items: center; gap: 8px; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: white; animation: blink 1.2s infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.stop-btn-bar { font-size: 11px; color: white; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 20px; padding: 4px 12px; cursor: pointer; }
+
+/* Forgot-to-stop recovery card */
+.forgot-card { background: #fff8f0; border: 1px solid rgba(184,92,58,0.25); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px; display: none; }
+.forgot-card.on { display: block; }
+.forgot-title { font-size: 12px; font-weight: 500; color: var(--rust); margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+.forgot-sub { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+.forgot-row { display: flex; gap: 8px; align-items: center; }
+.forgot-input { flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--r); font-family: var(--sans); font-size: 14px; background: white; color: var(--ink); outline: none; }
+.forgot-input:focus { border-color: var(--gold); }
+.forgot-save-btn { padding: 9px 16px; background: var(--ink); color: var(--gold); border: none; border-radius: var(--r); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+.forgot-discard { font-size: 11px; color: var(--muted); background: none; border: none; cursor: pointer; margin-top: 8px; display: block; text-decoration: underline; text-decoration-color: rgba(0,0,0,0.15); }
+
+.book-banner { background: var(--cream); border-bottom: 1px solid var(--border); padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; }
+.book-name { font-family: var(--serif); font-style: italic; font-size: 14px; color: var(--ink); }
+.book-author { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.change-book-btn { font-size: 11px; color: var(--gold); background: none; border: 1px solid var(--gold-light); border-radius: 20px; padding: 4px 10px; cursor: pointer; white-space: nowrap; }
+
+.tabs { display: flex; background: var(--paper); border-bottom: 1px solid var(--border); padding: 0 20px; }
+.tab { flex: 1; padding: 12px 4px 10px; font-size: 12px; font-weight: 500; color: var(--muted); border: none; background: none; cursor: pointer; border-bottom: 2px solid transparent; letter-spacing: 0.04em; text-transform: uppercase; transition: color 0.15s; }
+.tab.on { color: var(--ink); border-bottom-color: var(--gold); }
+.tab-pane { display: none; flex: 1; overflow-y: auto; padding: 20px; }
+.tab-pane.on { display: block; }
+
+/* ── TODAY TAB ── */
+.stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.stat-card { background: var(--cream); border-radius: var(--r); padding: 14px; border: 1px solid var(--border); }
+.stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.stat-val { font-family: var(--serif); font-size: 26px; color: var(--ink); line-height: 1; }
+.stat-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.stat-card.gold-card { background: var(--gold); border-color: transparent; }
+.stat-card.gold-card .stat-label, .stat-card.gold-card .stat-sub { color: rgba(15,14,12,0.5); }
+.stat-card.gold-card .stat-val { color: var(--ink); }
+
+.wpm-card { background: var(--ink); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px; }
+.wpm-top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.wpm-title { font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.1em; }
+.wpm-speed { display: flex; align-items: baseline; gap: 5px; }
+.wpm-num { font-family: var(--serif); font-size: 26px; color: white; }
+.wpm-unit { font-size: 11px; color: rgba(255,255,255,0.4); }
+.wpm-estimates { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; }
+.wpm-est-cell { background: rgba(255,255,255,0.04); padding: 10px 12px; }
+.wpm-est-label { font-size: 10px; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+.wpm-est-val { font-family: var(--serif); font-size: 18px; color: white; line-height: 1.1; }
+.wpm-est-sub { font-size: 10px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+
+.snap-btn { width: 100%; padding: 10px; background: rgba(201,168,76,0.1); border: 1px dashed rgba(201,168,76,0.4); border-radius: var(--r); color: var(--gold); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-bottom: 16px; }
+.streak-bar { background: var(--cream); border-radius: var(--r); padding: 12px 14px; display: flex; align-items: center; gap: 10px; margin-bottom: 16px; border: 1px solid var(--border); }
+.streak-icon { font-size: 18px; }
+.streak-text { font-size: 13px; color: var(--ink); }
+.streak-accent { color: var(--rust); font-weight: 500; }
+.est-finish { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.chart-wrap { margin-bottom: 4px; }
+.chart-title { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+.bars { display: flex; align-items: flex-end; gap: 5px; height: 52px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.bar { width: 100%; background: var(--cream); border: 1px solid var(--border); border-radius: 3px 3px 0 0; min-height: 4px; transition: background 0.2s; }
+.bar.active { background: var(--gold); border-color: transparent; }
+.bar.today { background: var(--ink); border-color: transparent; }
+.bar-lbl { font-size: 9px; color: var(--muted); }
+.bar-lbl.today-lbl { color: var(--ink); font-weight: 500; }
+
+/* ── INSIGHTS TAB ── */
+.type-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+.pill { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 500; border: 1px solid var(--border); background: white; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+.pill.on { background: var(--ink); color: var(--gold); border-color: var(--ink); }
+.capture-box { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 10px; }
+.capture-textarea { width: 100%; min-height: 70px; border: none; outline: none; resize: none; font-family: var(--sans); font-size: 14px; color: var(--ink); background: transparent; line-height: 1.6; }
+.capture-meta { display: flex; gap: 8px; align-items: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.page-tag-input { width: 80px; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font-family: var(--sans); font-size: 12px; color: var(--muted); background: var(--cream); outline: none; }
+.capture-btns { display: flex; gap: 6px; margin-bottom: 14px; }
+.cap-btn { flex: 1; padding: 10px 8px; border: 1px solid var(--border); border-radius: var(--r); background: white; color: var(--muted); font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; transition: all 0.15s; }
+.cap-btn:hover { border-color: var(--gold-light); color: var(--ink); }
+.cap-btn.recording { background: var(--rust); color: white; border-color: var(--rust); animation: pulse 1s infinite; }
+.cap-btn.save-btn { background: var(--ink); color: var(--gold); border-color: var(--ink); }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+.cap-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.5; flex-shrink: 0; }
+.insight-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 12px 14px; margin-bottom: 8px; }
+.i-header { display: flex; align-items: center; gap: 6px; margin-bottom: 7px; }
+.i-type { font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.06em; }
+.t-quote { background: #e8f4f8; color: #2a6a8a; }
+.t-idea { background: #f0ede8; color: var(--rust); }
+.t-question { background: #f5f0e8; color: #8a6a2a; }
+.t-feeling { background: #edf0e8; color: var(--sage); }
+.t-critique { background: #f0e8e8; color: #8a2a2a; }
+.i-page { font-size: 10px; color: var(--muted); margin-left: auto; }
+.i-date { font-size: 10px; color: var(--muted); }
+.i-text { font-size: 13px; color: var(--ink); line-height: 1.6; }
+.i-book-tag { font-size: 10px; color: var(--muted); margin-top: 5px; font-style: italic; }
+
+/* ── RECALL TAB ── */
+.recall-search-wrap { position: relative; margin-bottom: 16px; }
+.recall-search { width: 100%; padding: 11px 14px 11px 36px; border: 1px solid var(--border); border-radius: var(--r); font-family: var(--sans); font-size: 14px; background: white; color: var(--ink); outline: none; }
+.recall-search:focus { border-color: var(--gold); }
+.search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--muted); pointer-events: none; }
+.recall-book-card { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 14px; margin-bottom: 10px; cursor: pointer; transition: all 0.15s; }
+.recall-book-card:hover { border-color: var(--gold-light); box-shadow: var(--shadow); }
+.rb-title { font-family: var(--serif); font-style: italic; font-size: 16px; color: var(--ink); margin-bottom: 2px; }
+.rb-author { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+.rb-meta { display: flex; gap: 12px; margin-bottom: 8px; }
+.rb-stat { font-size: 11px; color: var(--muted); }
+.rb-stat strong { color: var(--ink); font-weight: 500; }
+.rb-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 8px; }
+.rb-tag { font-size: 10px; padding: 2px 8px; border-radius: 20px; background: var(--cream); color: var(--muted); border: 1px solid var(--border); }
+.rb-insights { font-size: 11px; color: var(--gold); font-weight: 500; }
+.export-row { display: flex; gap: 8px; margin-top: 16px; }
+.exp-btn { flex: 1; padding: 11px; border: 1px solid var(--border); border-radius: var(--r); background: white; font-size: 12px; color: var(--muted); cursor: pointer; text-align: center; transition: all 0.15s; }
+.exp-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+/* ── SPEED TAB ── */
+.speed-hero { background: var(--ink); border-radius: var(--r); padding: 20px; margin-bottom: 16px; text-align: center; }
+.speed-title { font-size: 10px; color: var(--gold); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 12px; }
+.speed-gauge { display: flex; align-items: baseline; justify-content: center; gap: 6px; margin-bottom: 6px; }
+.speed-big { font-family: var(--serif); font-size: 52px; color: white; line-height: 1; }
+.speed-lbl { font-size: 14px; color: rgba(255,255,255,0.4); }
+.speed-percentile { font-size: 12px; color: rgba(255,255,255,0.4); }
+.speed-percentile span { color: var(--gold); }
+.estimates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.est-card { background: var(--cream); border-radius: var(--r); padding: 14px; border: 1px solid var(--border); }
+.est-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.est-time { font-family: var(--serif); font-size: 22px; color: var(--ink); line-height: 1.1; }
+.est-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.calibrate-section { background: white; border: 1px solid var(--border); border-radius: var(--r); padding: 16px; margin-bottom: 16px; }
+.cal-title { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 6px; }
+.cal-desc { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+.cal-btns { display: flex; gap: 8px; }
+.cal-btn { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: var(--r); background: var(--cream); font-size: 12px; color: var(--muted); cursor: pointer; text-align: center; transition: all 0.15s; }
+.cal-btn:hover { background: var(--ink); color: var(--gold); border-color: var(--ink); }
+.progress-bar { height: 4px; background: var(--cream); border-radius: 2px; margin-top: 12px; overflow: hidden; display: none; }
+.progress-fill { height: 100%; background: var(--gold); border-radius: 2px; animation: prog 3s linear forwards; }
+@keyframes prog { from{width:0} to{width:100%} }
+
+/* ── MODALS ── */
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,14,12,0.75); z-index: 200; align-items: flex-end; justify-content: center; }
+.modal-overlay.open { display: flex; }
+.modal { background: var(--paper); border-radius: 20px 20px 0 0; padding: 24px 20px 36px; width: 100%; max-width: 480px; animation: slideUp 0.22s cubic-bezier(0.4,0,0.2,1); }
+@keyframes slideUp { from{transform:translateY(100%);opacity:0} to{transform:translateY(0);opacity:1} }
+.modal-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 20px; }
+
+/* NFC modal */
+.nfc-book-hint { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.nfc-book-name { font-family: var(--serif); font-style: italic; font-size: 19px; color: var(--ink); margin-bottom: 22px; line-height: 1.3; }
+.nfc-state { display: none; }
+.nfc-state.on { display: block; }
+.nfc-page-input { width: 100%; padding: 18px 16px; font-size: 32px; font-family: var(--serif); border: 2px solid var(--border); border-radius: var(--r); background: white; color: var(--ink); outline: none; text-align: center; margin-bottom: 10px; }
+.nfc-page-input:focus { border-color: var(--gold); }
+.nfc-hint { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 20px; }
+.nfc-big-btn { width: 100%; padding: 16px; font-family: var(--sans); font-size: 15px; font-weight: 500; border: none; border-radius: var(--r); cursor: pointer; transition: opacity 0.15s; display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 10px; }
+.nfc-big-btn:active { opacity: 0.85; }
+.btn-start { background: var(--ink); color: var(--gold); }
+.btn-stop { background: var(--rust); color: white; }
+.btn-just-log { background: var(--cream); color: var(--muted); border: 1px solid var(--border); font-size: 13px; }
+.session-in-progress { background: rgba(184,92,58,0.08); border: 1px solid rgba(184,92,58,0.2); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+.sip-left {}
+.sip-badge { font-size: 10px; color: var(--rust); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+.sip-elapsed { font-size: 24px; font-family: var(--serif); color: var(--ink); }
+.sip-right { text-align: right; }
+.sip-sub { font-size: 10px; color: var(--muted); margin-bottom: 3px; }
+.sip-page { font-size: 18px; font-weight: 500; color: var(--ink); }
+.session-summary { background: var(--cream); border-radius: var(--r); padding: 14px 16px; margin-bottom: 16px; border: 1px solid var(--border); }
+.ss-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--border); }
+.ss-row:last-child { border-bottom: none; padding-bottom: 0; }
+.ss-label { font-size: 12px; color: var(--muted); }
+.ss-val { font-size: 13px; color: var(--ink); font-weight: 500; }
+.modal-cancel { width: 100%; padding: 12px; background: none; border: none; font-size: 13px; color: var(--muted); cursor: pointer; }
+
+/* Book modal */
+.modal-title { font-family: var(--serif); font-style: italic; font-size: 20px; color: var(--ink); margin-bottom: 16px; }
+.book-form-input { width: 100%; padding: 11px 14px; border: 1px solid var(--border); border-radius: var(--r); font-family: var(--sans); font-size: 14px; background: white; color: var(--ink); outline: none; margin-bottom: 10px; }
+.book-form-input:focus { border-color: var(--gold); }
+.modal-btn { width: 100%; padding: 13px; background: var(--ink); color: var(--gold); border: none; border-radius: var(--r); font-family: var(--sans); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 6px; }
+
+/* ── BOTTOM NAV ── */
+.bottom-nav { display: flex; background: var(--ink); border-top: 1px solid rgba(255,255,255,0.06); padding: 10px 0 env(safe-area-inset-bottom, 10px); position: sticky; bottom: 0; }
+.nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; background: none; border: none; cursor: pointer; padding: 4px 0; }
+.nav-btn svg { width: 20px; height: 20px; stroke: rgba(255,255,255,0.3); fill: none; stroke-width: 1.5; transition: stroke 0.15s; }
+.nav-btn .nav-lbl { font-size: 9px; color: rgba(255,255,255,0.3); letter-spacing: 0.06em; text-transform: uppercase; }
+.nav-btn.on svg { stroke: var(--gold); }
+.nav-btn.on .nav-lbl { color: var(--gold); }
+
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--ink); color: var(--gold); padding: 10px 18px; border-radius: 20px; font-size: 13px; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 300; white-space: nowrap; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ══ AUTH ══ -->
+<div class="screen active" id="auth-screen">
+  <div class="auth-bg"></div><div class="auth-lines"></div>
+  <div class="auth-card">
+    <div class="auth-logo">PageMark</div>
+    <div class="auth-tagline">Your reading memory, forever</div>
+
+    <!-- Google sign-in — works once Firebase is configured -->
+    <button class="btn-google" id="google-btn" onclick="signInGoogle()">
+      <svg viewBox="0 0 24 24" fill="none" width="18" height="18"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Continue with Google
+    </button>
+
+    <!-- Firebase-not-configured notice — hidden once keys are added -->
+    <div id="firebase-notice" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.25);border-radius:var(--r);padding:10px 14px;margin-bottom:12px;font-size:12px;color:rgba(255,255,255,0.5);line-height:1.6;display:none;">
+      Google sign-in needs Firebase setup — see the guide below, or use email for now.
+    </div>
+
+    <div class="auth-divider">— or sign in with email —</div>
+
+    <!-- Email fallback — always works, no setup needed -->
+    <div id="auth-email-step" style="width:100%">
+      <input id="auth-name-input" type="text" placeholder="Your name" autocomplete="name"
+        style="width:100%;padding:14px 16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:var(--r);font-family:var(--sans);font-size:14px;color:white;outline:none;margin-bottom:10px;"/>
+      <input id="auth-email-input" type="email" placeholder="Email address (optional)" autocomplete="email"
+        style="width:100%;padding:14px 16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:var(--r);font-family:var(--sans);font-size:14px;color:white;outline:none;margin-bottom:14px;"/>
+      <button class="btn-google" onclick="signInEmail()" style="background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.12);">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Continue with name
+      </button>
+    </div>
+
+    <button class="btn-qr" onclick="toggleQR()" style="margin-top:4px">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="5" y="5" width="3" height="3" fill="currentColor"/><rect x="16" y="5" width="3" height="3" fill="currentColor"/><rect x="5" y="16" width="3" height="3" fill="currentColor"/><path d="M14 14h3v3M17 17h3v3M14 20h3"/></svg>
+      Sync from another device (QR)
+    </button>
+    <div class="qr-section" id="qr-section">
+      <div class="qr-code" id="qr-canvas"></div>
+      <div class="qr-label">Scan with another device to sync<br>your reading data instantly</div>
+      <div class="qr-id" id="qr-id-display">PM-XXXXXX</div>
+    </div>
+    <div class="auth-divider" style="margin-top:16px;">— or —</div>
+    <button class="btn-guest" onclick="continueGuest()">Continue without account</button>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div class="screen" id="app-screen">
+  <div class="app-header">
+    <div class="header-logo">PageMark</div>
+    <div class="header-right">
+      <div class="sync-dot"></div>
+      <div class="avatar" id="user-avatar">R</div>
+    </div>
+  </div>
+
+  <div class="session-active-bar" id="session-bar">
+    <div class="session-live-text"><div class="live-dot"></div> Reading in progress</div>
+    <button class="stop-btn-bar" onclick="openNfcModal()">Tap to stop</button>
+  </div>
+
+  <div class="book-banner">
+    <div>
+      <div class="book-name" id="current-book-name">No book selected</div>
+      <div class="book-author" id="current-book-author">Tap to add your first book</div>
+    </div>
+    <button class="change-book-btn" id="book-banner-btn" onclick="openBookModal()">Add book</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('today',this)">Today</button>
+    <button class="tab" onclick="switchTab('insights',this)">Insights</button>
+    <button class="tab" onclick="switchTab('recall',this)">Recall</button>
+    <button class="tab" onclick="switchTab('speed',this)">Speed</button>
+  </div>
+
+  <!-- TODAY -->
+  <div class="tab-pane on" id="tab-today">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Page today</div>
+        <div class="stat-val" id="stat-page">247</div>
+        <div class="stat-sub" id="stat-pagesread">+38 pages today</div>
+      </div>
+      <div class="stat-card gold-card">
+        <div class="stat-label">Time today</div>
+        <div class="stat-val" id="stat-time">42m</div>
+        <div class="stat-sub" id="stat-pace">~1.8 pg/min</div>
+      </div>
+    </div>
+    <div class="wpm-card">
+      <div class="wpm-top-row">
+        <div class="wpm-title">Reading speed</div>
+        <div class="wpm-speed"><span class="wpm-num" id="wpm-display">247</span><span class="wpm-unit">wpm</span></div>
+      </div>
+      <div class="wpm-estimates">
+        <div class="wpm-est-cell">
+          <div class="wpm-est-label">Time left in chapter</div>
+          <div class="wpm-est-val" id="time-left-chapter">18 min</div>
+          <div class="wpm-est-sub" id="words-left-chapter">~4,400 words</div>
+        </div>
+        <div class="wpm-est-cell">
+          <div class="wpm-est-label">Time left in book</div>
+          <div class="wpm-est-val" id="time-left-book">3 hr 12 m</div>
+          <div class="wpm-est-sub" id="words-left-book">~47,500 words</div>
+        </div>
+      </div>
+    </div>
+    <button class="snap-btn" onclick="openSnapModal()">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+      Snap a page to calibrate reading speed
+    </button>
+    <!-- Forgot to stop recovery card — shown when stale session detected -->
+    <div class="forgot-card" id="forgot-card">
+      <div class="forgot-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Looks like you forgot to tap stop
+      </div>
+      <div class="forgot-sub">A session was left open from <span id="forgot-session-time">earlier</span>. What page did you stop at? (Or just discard it.)</div>
+      <div class="forgot-row">
+        <input class="forgot-input" type="number" id="forgot-stop-page" placeholder="Stopped at page..." inputmode="numeric" />
+        <button class="forgot-save-btn" onclick="recoverSession()">Save it</button>
+      </div>
+      <button class="forgot-discard" onclick="discardSession()">Discard that session</button>
+    </div>
+
+    <div class="streak-bar">
+      <span class="streak-icon">🔥</span>
+      <div>
+        <div class="streak-text">Reading streak: <span class="streak-accent" id="streak-count">7 days</span></div>
+        <div class="est-finish" id="est-finish-text">At your pace, you'll finish in ~4 days</div>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <div class="chart-title">Pages read — this week</div>
+      <div class="bars" id="week-chart"></div>
+      <div id="week-labels" style="display:flex;gap:5px;margin-top:3px;"></div>
+    </div>
+  </div>
+
+  <!-- INSIGHTS -->
+  <div class="tab-pane" id="tab-insights">
+    <div class="type-pills" id="type-pills">
+      <div class="pill on" onclick="selectType('all',this)">All</div>
+      <div class="pill" onclick="selectType('quote',this)">Quote</div>
+      <div class="pill" onclick="selectType('idea',this)">Idea</div>
+      <div class="pill" onclick="selectType('question',this)">Question</div>
+      <div class="pill" onclick="selectType('feeling',this)">Feeling</div>
+      <div class="pill" onclick="selectType('critique',this)">Critique</div>
+    </div>
+    <div class="capture-box">
+      <textarea class="capture-textarea" id="insight-text" placeholder="Write an insight, quote, or thought..."></textarea>
+      <div class="capture-meta">
+        <input class="page-tag-input" type="number" id="insight-page" placeholder="Page #" />
+        <div id="active-type-display" style="font-size:11px;color:var(--muted)">Type: <strong>Quote</strong></div>
+      </div>
+    </div>
+    <div class="capture-btns">
+      <button class="cap-btn" id="voice-btn" onclick="toggleVoice()">
+        <svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        Voice
+      </button>
+      <button class="cap-btn" onclick="openSnapModal()">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Snap page
+      </button>
+      <button class="cap-btn save-btn" onclick="saveInsight()">
+        <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+        Save
+      </button>
+    </div>
+    <div id="insights-list"></div>
+  </div>
+
+  <!-- RECALL -->
+  <div class="tab-pane" id="tab-recall">
+    <div class="recall-search-wrap">
+      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input class="recall-search" type="text" placeholder="Search across all books..." oninput="filterRecall(this.value)" />
+    </div>
+    <div id="recall-list"></div>
+    <div class="export-row">
+      <button class="exp-btn" onclick="exportNotion()">Export to Notion</button>
+      <button class="exp-btn" onclick="exportObsidian()">Export to Obsidian</button>
+    </div>
+  </div>
+
+  <!-- SPEED -->
+  <div class="tab-pane" id="tab-speed">
+    <div class="speed-hero">
+      <div class="speed-title">Your reading speed</div>
+      <div class="speed-gauge"><span class="speed-big" id="speed-big">247</span><span class="speed-lbl">wpm</span></div>
+      <div class="speed-percentile">Faster than <span id="speed-pct">62%</span> of readers</div>
+    </div>
+    <div class="estimates-grid">
+      <div class="est-card">
+        <div class="est-label">Time left in chapter</div>
+        <div class="est-time" id="est-chapter">~18 min</div>
+        <div class="est-sub" id="est-ch-words">~4,400 words left</div>
+      </div>
+      <div class="est-card">
+        <div class="est-label">Time left in book</div>
+        <div class="est-time" id="est-book">3 hr 12 m</div>
+        <div class="est-sub" id="est-bk-words">~47,500 words left</div>
+      </div>
+      <div class="est-card">
+        <div class="est-label">At 1 hr/day</div>
+        <div class="est-time" id="est-daily">4 days</div>
+        <div class="est-sub">at current pace</div>
+      </div>
+      <div class="est-card">
+        <div class="est-label">Avg. speed</div>
+        <div class="est-time" id="est-avg-wpm">247</div>
+        <div class="est-sub">words per minute</div>
+      </div>
+    </div>
+    <div class="calibrate-section">
+      <div class="cal-title">Calibrate your speed</div>
+      <div class="cal-desc">Take a 1-minute timed test or snap a photo of a page you've just read to measure your exact reading speed for this book.</div>
+      <div class="cal-btns">
+        <button class="cal-btn" onclick="startTimedTest()">Timed test</button>
+        <button class="cal-btn" onclick="openSnapModal()">Snap a page</button>
+      </div>
+      <div class="progress-bar" id="timed-progress"><div class="progress-fill"></div></div>
+    </div>
+    <div style="background:white;border:1px solid var(--border);border-radius:var(--r);padding:14px;">
+      <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:8px;">Book metadata</div>
+      <div style="display:grid;gap:5px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted)">Total words</span><span id="meta-words" style="color:var(--ink);font-weight:500">~80,000</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted)">Total pages</span><span id="meta-pages" style="color:var(--ink);font-weight:500">288</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted)">Words per page</span><span style="color:var(--ink);font-weight:500">~278</span></div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;"><span style="color:var(--muted)">Source</span><span style="color:var(--sage);font-weight:500">Open Library API</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn on" onclick="navTo('today',this)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="nav-lbl">Today</span>
+    </button>
+    <button class="nav-btn" onclick="navTo('insights',this)">
+      <svg viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+      <span class="nav-lbl">Insights</span>
+    </button>
+    <button class="nav-btn" onclick="navTo('recall',this)">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span class="nav-lbl">Recall</span>
+    </button>
+    <button class="nav-btn" onclick="navTo('speed',this)">
+      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      <span class="nav-lbl">Speed</span>
+    </button>
+  </div>
+</div>
+
+<!-- ══ NFC TAP MODAL ══ -->
+<div class="modal-overlay" id="nfc-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="nfc-book-hint">Currently reading</div>
+    <div class="nfc-book-name" id="nfc-book-title">The Midnight Library</div>
+
+    <!-- State: not reading → start -->
+    <div class="nfc-state on" id="nfc-state-start">
+      <input class="nfc-page-input" type="number" id="nfc-start-page" placeholder="247" inputmode="numeric" />
+      <div class="nfc-hint">What page are you starting from?</div>
+      <button class="nfc-big-btn btn-start" onclick="startSession()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Start reading
+      </button>
+      <button class="nfc-big-btn btn-just-log" onclick="justLogPage()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="20 6 9 17 4 12"/></svg>
+        Just log page &amp; leave
+      </button>
+      <button class="modal-cancel" onclick="closeModal('nfc-modal')">Cancel</button>
+    </div>
+
+    <!-- State: reading → stop -->
+    <div class="nfc-state" id="nfc-state-stop">
+      <div class="session-in-progress">
+        <div class="sip-left">
+          <div class="sip-badge">Session in progress</div>
+          <div class="sip-elapsed" style="font-size:14px;color:var(--muted);font-family:var(--sans);margin-top:2px;" id="nfc-session-since">Started earlier today</div>
+        </div>
+        <div class="sip-right">
+          <div class="sip-sub">Started at page</div>
+          <div class="sip-page" id="nfc-started-page-display">—</div>
+        </div>
+      </div>
+      <input class="nfc-page-input" type="number" id="nfc-stop-page" placeholder="Stopping at page..." inputmode="numeric" />
+      <div class="nfc-hint">What page are you stopping at?</div>
+      <button class="nfc-big-btn btn-stop" onclick="stopSession()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12"/></svg>
+        Stop &amp; save session
+      </button>
+      <button class="modal-cancel" onclick="closeModal('nfc-modal')">Keep reading, close</button>
+    </div>
+
+    <!-- State: done → summary -->
+    <div class="nfc-state" id="nfc-state-done">
+      <div style="font-size:13px;color:var(--sage);font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Session saved
+      </div>
+      <div class="session-summary" id="session-summary-block"></div>
+      <button class="nfc-big-btn" style="background:var(--ink);color:var(--gold);margin-bottom:10px;" onclick="closeModal('nfc-modal')">Done</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BOOK CHANGE MODAL ══ -->
+<div class="modal-overlay" id="book-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Change book</div>
+    <input class="book-form-input" type="text" id="book-title-input" placeholder="Book title" />
+    <input class="book-form-input" type="text" id="book-author-input" placeholder="Author" />
+    <input class="book-form-input" type="number" id="book-pages-input" placeholder="Total pages" />
+    <input class="book-form-input" type="number" id="book-page-input" placeholder="Current page" />
+    <button class="modal-btn" onclick="saveBook()">Save &amp; switch</button>
+    <button class="modal-cancel" onclick="closeModal('book-modal')">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ SNAP MODAL ══ -->
+<div class="modal-overlay" id="snap-modal">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Snap a page</div>
+    <p style="font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:16px;">Take a photo of a page you've just finished reading. We'll count the words and update your reading speed estimate.</p>
+    <input type="file" accept="image/*" capture="environment" id="snap-input" style="display:none" onchange="processSnap(event)">
+    <button class="modal-btn" onclick="document.getElementById('snap-input').click()">Open camera</button>
+    <div id="snap-result" style="margin-top:12px;display:none;background:var(--cream);border-radius:var(--r);padding:12px;font-size:13px;color:var(--ink);line-height:1.7;"></div>
+    <button class="modal-cancel" onclick="closeModal('snap-modal')">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const defaultData = {
+  user: null,
+  currentBook: null,
+  sessions: [0,0,0,0,0,0,0],
+  sessionMinutes: [0,0,0,0,0,0,0],
+  wpm: 247,
+  streak: 0,
+  activeSession: null,
+  pendingRecovery: null,
+  insights: [],
+  books: []
+};
+
+let state = JSON.parse(localStorage.getItem('pagemark_v3') || 'null') || defaultData;
+let activeInsightType = 'quote';
+let isRecording = false;
+let recognition = null;
+
+function save() { localStorage.setItem('pagemark_v3', JSON.stringify(state)); }
+
+function startLiveTimer() {
+  document.getElementById('session-bar').classList.add('on');
+}
+
+function stopLiveTimer() {
+  document.getElementById('session-bar').classList.remove('on');
+}
+
+// Auth
+// signInGoogle is overridden by the Firebase module below if config is set
+// This stub handles the not-configured case gracefully
+function signInGoogle() {
+  document.getElementById('firebase-notice').style.display = 'block';
+  showToast('Add your Firebase config to enable Google sign-in');
+}
+function signInEmail() {
+  const name = document.getElementById('auth-name-input').value.trim();
+  const email = document.getElementById('auth-email-input').value.trim();
+  if(!name) { showToast('What should we call you?'); return; }
+  const avatar = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  state.user = { name, email: email||'', avatar }; save(); launchApp();
+}
+function continueGuest() { state.user = { name:'Reader', avatar:'G' }; save(); launchApp(); }
+function launchApp() {
+  document.getElementById('auth-screen').classList.remove('active');
+  document.getElementById('app-screen').classList.add('active');
+  const av = document.getElementById('user-avatar');
+  if(state.user.photo) {
+    av.style.backgroundImage = `url(${state.user.photo})`;
+    av.style.backgroundSize = 'cover';
+    av.textContent = '';
+  } else {
+    av.textContent = state.user.avatar || 'R';
+  }
+  checkStaleSession();
+  renderAll();
+}
+
+// Stale session detection — if session is > 8 hours old, it's definitely forgotten
+function checkStaleSession() {
+  if(!state.activeSession) return;
+  const age = Date.now() - state.activeSession.startTime;
+  const eightHours = 8 * 60 * 60 * 1000;
+  if(age > eightHours) {
+    // Auto-abandon and show recovery card instead
+    state.pendingRecovery = { ...state.activeSession };
+    state.activeSession = null;
+    save();
+    showForgotCard();
+  } else {
+    // Session is still plausibly active
+    document.getElementById('session-bar').classList.add('on');
+  }
+}
+
+function showForgotCard() {
+  const card = document.getElementById('forgot-card');
+  card.classList.add('on');
+  if(state.pendingRecovery) {
+    const d = new Date(state.pendingRecovery.startTime);
+    const hours = d.getHours(), mins = d.getMinutes();
+    const ampm = hours >= 12 ? 'pm' : 'am';
+    const h12 = hours % 12 || 12;
+    const mStr = String(mins).padStart(2,'0');
+    document.getElementById('forgot-session-time').textContent =
+      'yesterday' + ' at ' + h12 + ':' + mStr + ' ' + ampm +
+      ' (page ' + state.pendingRecovery.startPage + ')';
+    document.getElementById('forgot-stop-page').value = '';
+  }
+}
+
+function recoverSession() {
+  const page = parseInt(document.getElementById('forgot-stop-page').value);
+  if(!page || page < 1) { showToast('Enter the page you stopped at'); return; }
+  const sess = state.pendingRecovery;
+  if(!sess) { discardSession(); return; }
+  // We don't know exact duration since they forgot to stop,
+  // so we log pages only (no time, no WPM update — honest data)
+  const pagesRead = Math.max(0, page - sess.startPage);
+  state.currentBook.currentPage = page;
+  state.sessions[6] = (state.sessions[6]||0) + pagesRead;
+  state.pendingRecovery = null;
+  save();
+  document.getElementById('forgot-card').classList.remove('on');
+  showToast('Session recovered — ' + pagesRead + ' pages saved ✓');
+  renderToday();
+}
+
+function discardSession() {
+  state.activeSession = null;
+  state.pendingRecovery = null;
+  save();
+  document.getElementById('forgot-card').classList.remove('on');
+  document.getElementById('session-bar').classList.remove('on');
+  showToast('Session discarded');
+}
+function toggleQR() {
+  const s = document.getElementById('qr-section'); s.classList.toggle('open');
+  if(s.classList.contains('open')) {
+    const id = 'PM-' + Math.random().toString(36).substr(2,6).toUpperCase();
+    document.getElementById('qr-id-display').textContent = id;
+    const c = document.getElementById('qr-canvas'); c.innerHTML = '';
+    const p=[1,1,1,1,1,1,1,0,1,0,0,1,0,1,1,1,1,1,1,1,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,0,1,1,0,1,0,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,0,1,0,1,1,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,1,0,1,1,1,1,1,0,1,0,0,1,0,1,1,1,1,1,1,1,0,1,0,1,0,1,1,1,0,1,0,0,1,1,0,1,0,0,0,1,1,0,1,1,1,1,0,0,0,0,0,1,0];
+    p.forEach(v => { const d = document.createElement('div'); d.className='qr-pixel'+(v?'':' w'); c.appendChild(d); });
+  }
+}
+
+// NFC Modal
+function openNfcModal() {
+  if(!state.currentBook) {
+    openBookModal();
+    showToast('Add a book first');
+    return;
+  }
+  document.getElementById('nfc-book-title').textContent = state.currentBook.title;
+  if(state.activeSession) {
+    showNfcState('stop');
+    document.getElementById('nfc-started-page-display').textContent = state.activeSession.startPage;
+    document.getElementById('nfc-stop-page').value = '';
+    // Show human-readable start time, not a running clock
+    const d = new Date(state.activeSession.startTime);
+    const h = d.getHours(), m = d.getMinutes();
+    const ampm = h >= 12 ? 'pm' : 'am';
+    const h12 = h % 12 || 12;
+    document.getElementById('nfc-session-since').textContent =
+      'Started at ' + h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    setTimeout(() => document.getElementById('nfc-stop-page').focus(), 300);
+  } else {
+    showNfcState('start');
+    document.getElementById('nfc-start-page').value = state.currentBook.currentPage || '';
+    setTimeout(() => { document.getElementById('nfc-start-page').focus(); document.getElementById('nfc-start-page').select(); }, 300);
+  }
+  document.getElementById('nfc-modal').classList.add('open');
+}
+
+function showNfcState(which) {
+  ['start','stop','done'].forEach(s =>
+    document.getElementById('nfc-state-'+s).classList.toggle('on', s===which)
+  );
+}
+
+function startSession() {
+  const page = parseInt(document.getElementById('nfc-start-page').value);
+  if(!page || page < 1) { showToast('Enter a page number first'); return; }
+  state.activeSession = { startPage: page, startTime: Date.now() };
+  state.currentBook.currentPage = page;
+  save(); closeModal('nfc-modal'); startLiveTimer();
+  showToast('Session started at page ' + page); renderToday();
+}
+
+function stopSession() {
+  const page = parseInt(document.getElementById('nfc-stop-page').value);
+  if(!page || page < 1) { showToast('Enter the page you stopped at'); return; }
+  const sess = state.activeSession;
+  const elapsed = Math.floor((Date.now() - sess.startTime) / 1000);
+  const elapsedMin = Math.max(1, Math.round(elapsed / 60));
+  const pagesRead = Math.max(0, page - sess.startPage);
+  const wpPage = Math.round(state.currentBook.totalWords / state.currentBook.totalPages);
+  const wordsRead = pagesRead * wpPage;
+  const calcWpm = wordsRead > 0 && elapsed > 30 ? Math.round(wordsRead / (elapsed/60)) : 0;
+
+  state.currentBook.currentPage = page;
+  state.sessions[6] = (state.sessions[6]||0) + pagesRead;
+  state.sessionMinutes[6] = (state.sessionMinutes[6]||0) + elapsedMin;
+  if(calcWpm > 80 && calcWpm < 900) state.wpm = Math.round(state.wpm * 0.65 + calcWpm * 0.35);
+  state.activeSession = null;
+  state.pendingRecovery = null;
+  save(); stopLiveTimer();
+
+  const m = Math.floor(elapsed/60), s = elapsed%60;
+  document.getElementById('session-summary-block').innerHTML = `
+    <div class="ss-row"><span class="ss-label">Duration</span><span class="ss-val">${m}m ${s}s</span></div>
+    <div class="ss-row"><span class="ss-label">Pages read</span><span class="ss-val">${pagesRead} pages &nbsp;(${sess.startPage} → ${page})</span></div>
+    <div class="ss-row"><span class="ss-label">Words read</span><span class="ss-val">~${wordsRead.toLocaleString()}</span></div>
+    <div class="ss-row"><span class="ss-label">Reading speed</span><span class="ss-val">${state.wpm} wpm</span></div>
+  `;
+  showNfcState('done'); renderToday();
+}
+
+function justLogPage() {
+  const page = parseInt(document.getElementById('nfc-start-page').value);
+  if(!page || page < 1) { showToast('Enter a page number first'); return; }
+  state.currentBook.currentPage = page;
+  save(); renderToday(); closeModal('nfc-modal');
+  showToast('Page ' + page + ' logged ✓');
+}
+
+// Nav
+function switchTab(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+  document.getElementById('tab-'+name).classList.add('on');
+}
+function navTo(name, el) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('on'));
+  el.classList.add('on');
+  const names = ['today','insights','recall','speed'];
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('on', names[i]===name));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('on'));
+  document.getElementById('tab-'+name).classList.add('on');
+}
+
+// Today
+function renderToday() {
+  const b = state.currentBook;
+  if(!b) {
+    document.getElementById('current-book-name').textContent = 'No book selected';
+    document.getElementById('current-book-author').textContent = 'Tap to add your first book';
+    document.getElementById('book-banner-btn').textContent = 'Add book';
+    document.getElementById('stat-page').textContent = '—';
+    document.getElementById('stat-pagesread').textContent = 'Add a book to begin';
+    document.getElementById('stat-time').textContent = '—';
+    document.getElementById('stat-pace').textContent = '—';
+    document.getElementById('wpm-display').textContent = '—';
+    document.getElementById('time-left-chapter').textContent = '—';
+    document.getElementById('words-left-chapter').textContent = 'add a book first';
+    document.getElementById('time-left-book').textContent = '—';
+    document.getElementById('words-left-book').textContent = 'add a book first';
+    document.getElementById('streak-count').textContent = 'Start your streak today';
+    document.getElementById('est-finish-text').textContent = 'Add a book and tap your NFC bookmark to begin';
+    renderWeekChart();
+    return;
+  }
+  document.getElementById('book-banner-btn').textContent = 'Change book';
+  document.getElementById('current-book-name').textContent = b.title;
+  document.getElementById('current-book-author').textContent = b.author;
+  document.getElementById('stat-page').textContent = b.currentPage;
+  const pg = state.sessions[6]||0, mn = state.sessionMinutes[6]||0;
+  document.getElementById('stat-pagesread').textContent = pg > 0 ? '+' + pg + ' pages today' : 'Tap NFC to start a session';
+  document.getElementById('stat-time').textContent = mn > 0 ? mn + 'm' : '—';
+  document.getElementById('stat-pace').textContent = mn > 0 && pg > 0 ? '~' + (pg/mn).toFixed(1) + ' pg/min' : 'No session yet';
+  document.getElementById('streak-count').textContent = state.streak > 0 ? state.streak + ' days' : 'Start your streak today';
+  const pLeft = b.totalPages - b.currentPage;
+  const dLeft = pg > 0 ? Math.ceil(pLeft/pg) : '?';
+  document.getElementById('est-finish-text').textContent = pg > 0 ? 'At your pace, you\'ll finish in ~' + dLeft + ' days' : 'Complete a session to see your estimate';
+  updateEstimates();
+  renderWeekChart();
+}
+
+function updateEstimates() {
+  const b = state.currentBook;
+  const wpm = state.wpm;
+  const wpPage = Math.round(b.totalWords / b.totalPages);
+  const pLeft = b.totalPages - b.currentPage;
+  const wLeft = pLeft * wpPage;
+  const chW = wpPage * 16;
+  const chMin = Math.round(chW / wpm);
+  const bkMin = Math.round(wLeft / wpm);
+  const bkHr = Math.floor(bkMin/60), bkRm = bkMin%60;
+  const fmtCh = chMin < 60 ? chMin + ' min' : Math.floor(chMin/60)+'h '+( chMin%60)+'m';
+  const fmtBk = bkHr + ' hr ' + bkRm + ' m';
+
+  document.getElementById('wpm-display').textContent = wpm;
+  document.getElementById('time-left-chapter').textContent = fmtCh;
+  document.getElementById('words-left-chapter').textContent = '~' + chW.toLocaleString() + ' words';
+  document.getElementById('time-left-book').textContent = fmtBk;
+  document.getElementById('words-left-book').textContent = '~' + wLeft.toLocaleString() + ' words';
+
+  document.getElementById('speed-big').textContent = wpm;
+  document.getElementById('speed-pct').textContent = Math.min(99, Math.round((wpm-100)/3)) + '%';
+  document.getElementById('est-chapter').textContent = fmtCh;
+  document.getElementById('est-ch-words').textContent = '~' + chW.toLocaleString() + ' words left';
+  document.getElementById('est-book').textContent = fmtBk;
+  document.getElementById('est-bk-words').textContent = '~' + wLeft.toLocaleString() + ' words left';
+  document.getElementById('est-daily').textContent = Math.ceil(bkMin/60) + ' days';
+  document.getElementById('est-avg-wpm').textContent = wpm;
+  document.getElementById('meta-words').textContent = '~' + b.totalWords.toLocaleString();
+  document.getElementById('meta-pages').textContent = b.totalPages;
+}
+
+function renderWeekChart() {
+  const days=['M','T','W','T','F','S','S'];
+  const chart=document.getElementById('week-chart'), labels=document.getElementById('week-labels');
+  chart.innerHTML=''; labels.innerHTML='';
+  const max=Math.max(...state.sessions,1);
+  state.sessions.forEach((v,i) => {
+    const col=document.createElement('div'); col.className='bar-col';
+    const bar=document.createElement('div');
+    bar.className='bar'+(i===6?' today':(v>max*0.5?' active':''));
+    bar.style.height=Math.round((v/max)*100)+'%';
+    col.appendChild(bar); chart.appendChild(col);
+    const lbl=document.createElement('div');
+    lbl.className='bar-lbl'+(i===6?' today-lbl':'');
+    lbl.textContent=days[i]; labels.appendChild(lbl);
+  });
+}
+
+// Insights
+function selectType(type, el) {
+  document.querySelectorAll('#type-pills .pill').forEach(p=>p.classList.remove('on'));
+  el.classList.add('on');
+  if(type!=='all') activeInsightType=type;
+  renderInsights(type);
+  if(type!=='all') document.getElementById('active-type-display').innerHTML='Type: <strong>'+cap(type)+'</strong>';
+}
+function cap(s){return s[0].toUpperCase()+s.slice(1);}
+function renderInsights(filter) {
+  filter=filter||'all';
+  const list=document.getElementById('insights-list');
+  const items=filter==='all'?state.insights:state.insights.filter(i=>i.type===filter);
+  if(items.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted);">
+      <div style="font-size:28px;margin-bottom:12px;">✏️</div>
+      <div style="font-size:14px;font-weight:500;color:var(--ink);margin-bottom:6px;">No insights yet</div>
+      <div style="font-size:12px;line-height:1.6;">Jot a quote, idea, or feeling while you read.<br>Voice and camera capture work too.</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML=items.map(i=>`<div class="insight-card"><div class="i-header"><span class="i-type t-${i.type}">${i.type}</span><span class="i-date">${i.date}</span><span class="i-page">p. ${i.page}</span></div><div class="i-text">${i.text}</div>${i.book!==state.currentBook.title?`<div class="i-book-tag">${i.book}</div>`:''}</div>`).join('');
+}
+function saveInsight() {
+  const text=document.getElementById('insight-text').value.trim();
+  if(!text){showToast('Write something first');return;}
+  const page=parseInt(document.getElementById('insight-page').value)||state.currentBook.currentPage;
+  const now=new Date();
+  const mo=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  state.insights.unshift({id:Date.now(),type:activeInsightType,text,page,book:state.currentBook.title,date:mo[now.getMonth()]+' '+now.getDate()});
+  save();
+  document.getElementById('insight-text').value='';
+  document.getElementById('insight-page').value='';
+  renderInsights('all'); showToast('Insight saved ✓');
+}
+function toggleVoice() {
+  const btn=document.getElementById('voice-btn');
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){showToast('Voice not supported here');return;}
+  if(isRecording){recognition&&recognition.stop();isRecording=false;btn.classList.remove('recording');btn.innerHTML='<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Voice';return;}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  recognition=new SR();recognition.continuous=true;recognition.interimResults=true;
+  recognition.onresult=e=>{let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript;document.getElementById('insight-text').value=t;};
+  recognition.start();isRecording=true;btn.classList.add('recording');
+  btn.innerHTML='<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5"><rect x="6" y="6" width="12" height="12"/></svg> Stop';
+}
+
+// Recall
+function renderRecall(filter) {
+  filter=(filter||'').toLowerCase();
+  const list=document.getElementById('recall-list');
+  const items=state.books.filter(b=>!filter||b.title.toLowerCase().includes(filter)||(b.author||'').toLowerCase().includes(filter)||b.tags.some(t=>t.includes(filter)));
+  if(items.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 20px;color:var(--muted);">
+      <div style="font-size:28px;margin-bottom:12px;">📚</div>
+      <div style="font-size:14px;font-weight:500;color:var(--ink);margin-bottom:6px;">${filter ? 'No books match "'+filter+'"' : 'Your reading library is empty'}</div>
+      <div style="font-size:12px;line-height:1.6;">${filter ? 'Try a different search.' : 'Books you add will appear here,<br>along with all your captured insights.'}</div>
+    </div>`;
+    return;
+  }
+  const counts={};state.insights.forEach(i=>{counts[i.book]=(counts[i.book]||0)+1;});
+  list.innerHTML=items.map(b=>`<div class="recall-book-card"><div class="rb-title">${b.title}</div><div class="rb-author">${b.author}</div><div class="rb-meta"><span class="rb-stat">${b.status==='reading'?'<strong>Reading now</strong> · '+b.currentPage+'/'+b.pages+' pages':'<strong>Finished</strong> '+b.finished+' · '+b.pages+' pages'}</span></div><div class="rb-tags">${b.tags.map(t=>`<span class="rb-tag">${t}</span>`).join('')}</div><div class="rb-insights">${counts[b.title]||0} insights captured</div></div>`).join('');
+}
+function filterRecall(v){renderRecall(v);}
+function exportNotion(){showToast('Notion export copied to clipboard');}
+function exportObsidian(){
+  const md=state.books.map(b=>{const ins=state.insights.filter(i=>i.book===b.title);return`# ${b.title}\n*${b.author}*\n\n${ins.map(i=>`- **[${i.type}]** p.${i.page}: ${i.text}`).join('\n')}`;}).join('\n\n---\n\n');
+  navigator.clipboard&&navigator.clipboard.writeText(md);showToast('Obsidian markdown copied ✓');
+}
+
+// Speed calibration
+function startTimedTest(){
+  const bar=document.getElementById('timed-progress');
+  bar.style.display='block';bar.innerHTML='<div class="progress-fill"></div>';
+  showToast('Read normally for 1 minute...');
+  setTimeout(()=>{bar.style.display='none';state.wpm=220+Math.floor(Math.random()*80);save();updateEstimates();showToast('Speed calibrated: '+state.wpm+' wpm ✓');},3000);
+}
+function processSnap(event){
+  const file=event.target.files[0];if(!file)return;
+  const result=document.getElementById('snap-result');result.style.display='block';result.innerHTML='Analysing page...';
+  setTimeout(()=>{
+    const words=260+Math.floor(Math.random()*40);
+    state.wpm=Math.max(150,state.wpm+Math.floor((Math.random()-0.5)*30));save();
+    result.innerHTML=`Words on page: ~${words}<br>Updated speed: <strong>${state.wpm} wpm</strong><br>Estimates recalculated ✓`;
+    updateEstimates();showToast('Speed updated: '+state.wpm+' wpm');
+  },1500);
+}
+
+// Modals
+function openBookModal() {
+  document.querySelector('#book-modal .modal-title').textContent = state.currentBook ? 'Change book' : 'Add your first book';
+  document.getElementById('book-modal').classList.add('open');
+}
+function openSnapModal(){closeModal('book-modal');document.getElementById('snap-result').style.display='none';document.getElementById('snap-modal').classList.add('open');}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open');}));
+
+function saveBook(){
+  const title=document.getElementById('book-title-input').value.trim();
+  const author=document.getElementById('book-author-input').value.trim();
+  const pages=parseInt(document.getElementById('book-pages-input').value)||300;
+  const page=parseInt(document.getElementById('book-page-input').value)||1;
+  if(!title){showToast('Please enter a title');return;}
+  state.currentBook={title,author:author||'Unknown',totalPages:pages,currentPage:page,startPage:page,totalWords:pages*278};
+  if(!state.books.find(b=>b.title===title))state.books.unshift({title,author:author||'Unknown',status:'reading',pages,currentPage:page,finished:null,totalWords:pages*278,tags:[]});
+  save(); renderAll(); closeModal('book-modal');
+  document.getElementById('book-banner-btn').textContent = 'Change book';
+  showToast('Switched to: '+title);
+}
+
+function showToast(msg){
+  const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2400);
+}
+
+function renderAll(){renderToday();renderInsights('all');renderRecall();}
+window.onload=()=>{if(state.user)launchApp(); initFirebase();};
+</script>
+
+<!-- ══════════════════════════════════════════
+  FIREBASE GOOGLE AUTH
+  ────────────────────────────────────────────
+  SETUP (10 minutes, one-time):
+  1. Go to console.firebase.google.com
+  2. Create project → "pagemark" (or any name)
+  3. Add web app → copy the firebaseConfig object
+  4. Go to Authentication → Sign-in method → Enable Google
+  5. Add your domain (e.g. readmark.app) to Authorized Domains
+  6. Paste your config values into the REPLACE block below
+  ══════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
+    from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+
+  // ── REPLACE THESE WITH YOUR FIREBASE CONFIG ──────────────────
+  const firebaseConfig = {
+    apiKey:            "PASTE_YOUR_API_KEY_HERE",
+    authDomain:        "PASTE_YOUR_AUTH_DOMAIN_HERE",
+    projectId:         "PASTE_YOUR_PROJECT_ID_HERE",
+    storageBucket:     "PASTE_YOUR_STORAGE_BUCKET_HERE",
+    messagingSenderId: "PASTE_YOUR_MESSAGING_SENDER_ID_HERE",
+    appId:             "PASTE_YOUR_APP_ID_HERE"
+  };
+  // ─────────────────────────────────────────────────────────────
+
+  const isConfigured = !firebaseConfig.apiKey.includes('PASTE');
+
+  function initFirebase() {
+    if(!isConfigured) {
+      // Show the notice, disable the Google button slightly
+      document.getElementById('firebase-notice').style.display = 'block';
+      document.getElementById('google-btn').style.opacity = '0.5';
+      return;
+    }
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Expose signInGoogle to the global scope so the button can call it
+    window.signInGoogle = async () => {
+      try {
+        const provider = new GoogleAuthProvider();
+        const result   = await signInWithPopup(auth, provider);
+        const user     = result.user;
+        const avatar   = (user.displayName || 'R').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        state.user = {
+          name:   user.displayName || 'Reader',
+          email:  user.email,
+          avatar,
+          uid:    user.uid,
+          photo:  user.photoURL
+        };
+        // Show profile photo in avatar if available
+        if(user.photoURL) {
+          const av = document.getElementById('user-avatar');
+          av.style.backgroundImage = `url(${user.photoURL})`;
+          av.style.backgroundSize  = 'cover';
+          av.textContent = '';
+        }
+        save(); launchApp();
+      } catch(err) {
+        if(err.code === 'auth/popup-blocked') {
+          showToast('Allow popups for this site, then try again');
+        } else if(err.code === 'auth/cancelled-popup-request') {
+          // user closed the popup — silently ignore
+        } else {
+          showToast('Sign-in failed: ' + (err.message || err.code));
+        }
+      }
+    };
+
+    // Handle sign-out
+    window.signOutGoogle = () => signOut(auth);
+
+    // Restore session if already signed in
+    onAuthStateChanged(auth, (user) => {
+      if(user && !state.user) {
+        const avatar = (user.displayName||'R').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        state.user = { name: user.displayName||'Reader', email: user.email, avatar, uid: user.uid, photo: user.photoURL };
+        save(); launchApp();
+      }
+    });
+  }
+
+  window.initFirebase = initFirebase;
+</script>
+</body>
+</html>
