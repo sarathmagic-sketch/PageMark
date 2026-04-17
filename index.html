@@ -648,7 +648,10 @@ function launchApp() {
     av.textContent = state.user.avatar || 'R';
   }
   checkStaleSession();
+  checkUrlParams();
   renderAll();
+  // Auto-open the NFC tap modal — this is the core interaction
+  setTimeout(() => openNfcModal(), 400);
 }
 
 // Stale session detection — if session is > 8 hours old, it's definitely forgotten
@@ -1008,6 +1011,8 @@ function saveBook(){
   save(); renderAll(); closeModal('book-modal');
   document.getElementById('book-banner-btn').textContent = 'Change book';
   showToast('Switched to: '+title);
+  // After adding a book, immediately open the NFC modal so user can start session
+  setTimeout(() => openNfcModal(), 300);
 }
 
 function showToast(msg){
@@ -1016,7 +1021,30 @@ function showToast(msg){
 }
 
 function renderAll(){renderToday();renderInsights('all');renderRecall();}
-window.onload=()=>{if(state.user)launchApp(); initFirebase();};
+
+// Read ?book= from URL — for per-book NFC tags
+function checkUrlParams() {
+  const params = new URLSearchParams(window.location.search);
+  const bookParam = params.get('book');
+  if(bookParam && state.books.length > 0) {
+    const match = state.books.find(b =>
+      b.title.toLowerCase().replace(/\s+/g,'-') === bookParam.toLowerCase()
+    );
+    if(match && state.currentBook?.title !== match.title) {
+      state.currentBook = {
+        title: match.title, author: match.author,
+        totalPages: match.pages, currentPage: match.currentPage,
+        startPage: match.currentPage, totalWords: match.totalWords || match.pages * 278
+      };
+      save();
+    }
+  }
+}
+
+window.onload=()=>{
+  initFirebase();
+  if(state.user) launchApp();
+};
 </script>
 
 <!-- ══════════════════════════════════════════
@@ -1078,33 +1106,4 @@ window.onload=()=>{if(state.user)launchApp(); initFirebase();};
           av.style.backgroundImage = `url(${user.photoURL})`;
           av.style.backgroundSize  = 'cover';
           av.textContent = '';
-        }
-        save(); launchApp();
-      } catch(err) {
-        if(err.code === 'auth/popup-blocked') {
-          showToast('Allow popups for this site, then try again');
-        } else if(err.code === 'auth/cancelled-popup-request') {
-          // user closed the popup — silently ignore
-        } else {
-          showToast('Sign-in failed: ' + (err.message || err.code));
-        }
-      }
-    };
-
-    // Handle sign-out
-    window.signOutGoogle = () => signOut(auth);
-
-    // Restore session if already signed in
-    onAuthStateChanged(auth, (user) => {
-      if(user && !state.user) {
-        const avatar = (user.displayName||'R').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-        state.user = { name: user.displayName||'Reader', email: user.email, avatar, uid: user.uid, photo: user.photoURL };
-        save(); launchApp();
-      }
-    });
-  }
-
-  window.initFirebase = initFirebase;
-</script>
-</body>
-</html>
+        
