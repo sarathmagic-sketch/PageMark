@@ -513,11 +513,21 @@ html, body { height: 100%; background: var(--ink); font-family: var(--sans); }
   <div class="modal">
     <div class="modal-handle"></div>
     <div class="nfc-book-hint">Currently reading</div>
-    <div class="nfc-book-name" id="nfc-book-title">The Midnight Library</div>
+    <div class="nfc-book-name" id="nfc-book-title">—</div>
 
-    <!-- State: not reading → start -->
+    <!-- STATE 1: Start — shows last page, confirm or change -->
     <div class="nfc-state on" id="nfc-state-start">
-      <input class="nfc-page-input" type="number" id="nfc-start-page" placeholder="247" inputmode="numeric" />
+      <div id="last-page-confirm" style="display:none;background:var(--cream);border-radius:var(--r);padding:12px 14px;margin-bottom:12px;border:1px solid var(--border);">
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:6px;">Last stopped at</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+          <div style="font-family:var(--serif);font-size:32px;color:var(--ink);" id="last-page-num">—</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="confirmLastPage()" style="padding:8px 14px;background:var(--ink);color:var(--gold);border:none;border-radius:8px;font-size:12px;font-family:var(--sans);cursor:pointer;white-space:nowrap;">Yes, start here</button>
+            <button onclick="clearLastPage()" style="padding:8px 12px;background:none;border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);cursor:pointer;font-family:var(--sans);">Change</button>
+          </div>
+        </div>
+      </div>
+      <input class="nfc-page-input" type="number" id="nfc-start-page" placeholder="Page number..." inputmode="numeric" />
       <div class="nfc-hint">What page are you starting from?</div>
       <button class="nfc-big-btn btn-start" onclick="startSession()">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
@@ -530,12 +540,12 @@ html, body { height: 100%; background: var(--ink); font-family: var(--sans); }
       <button class="modal-cancel" onclick="closeModal('nfc-modal')">Cancel</button>
     </div>
 
-    <!-- State: reading → stop -->
+    <!-- STATE 2: Stop — enter stopping page -->
     <div class="nfc-state" id="nfc-state-stop">
       <div class="session-in-progress">
         <div class="sip-left">
-          <div class="sip-badge">Session in progress</div>
-          <div class="sip-elapsed" style="font-size:14px;color:var(--muted);font-family:var(--sans);margin-top:2px;" id="nfc-session-since">Started earlier today</div>
+          <div class="sip-badge">Reading in progress</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:2px;" id="nfc-session-since">Started earlier today</div>
         </div>
         <div class="sip-right">
           <div class="sip-sub">Started at page</div>
@@ -551,7 +561,34 @@ html, body { height: 100%; background: var(--ink); font-family: var(--sans); }
       <button class="modal-cancel" onclick="closeModal('nfc-modal')">Keep reading, close</button>
     </div>
 
-    <!-- State: done → summary -->
+    <!-- STATE 3: Insights — capture thoughts right after stopping -->
+    <div class="nfc-state" id="nfc-state-insights">
+      <div style="background:var(--cream);border-radius:var(--r);padding:10px 14px;margin-bottom:14px;border:1px solid var(--border);font-size:12px;color:var(--muted);line-height:1.8;" id="stop-summary-mini"></div>
+      <div style="font-size:13px;font-weight:500;color:var(--ink);margin-bottom:10px;">Any thoughts to capture?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;">
+        <div class="pill on" onclick="selectNfcType('quote',this)">Quote</div>
+        <div class="pill" onclick="selectNfcType('idea',this)">Idea</div>
+        <div class="pill" onclick="selectNfcType('question',this)">Question</div>
+        <div class="pill" onclick="selectNfcType('feeling',this)">Feeling</div>
+      </div>
+      <textarea id="nfc-insight-text" placeholder="A thought, quote, or feeling from this session..."
+        style="width:100%;min-height:80px;padding:12px;border:1px solid var(--border);border-radius:var(--r);font-family:var(--sans);font-size:14px;resize:none;outline:none;background:white;line-height:1.6;margin-bottom:8px;"></textarea>
+      <div style="display:flex;gap:8px;margin-bottom:12px;">
+        <button class="cap-btn" id="nfc-voice-btn" onclick="toggleNfcVoice()" style="flex:1;">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;flex-shrink:0;"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+          Voice note
+        </button>
+        <input type="number" id="nfc-insight-page" placeholder="Page #" inputmode="numeric"
+          style="width:90px;padding:10px;border:1px solid var(--border);border-radius:var(--r);font-size:13px;text-align:center;outline:none;background:var(--cream);font-family:var(--sans);" />
+      </div>
+      <button class="nfc-big-btn btn-start" onclick="saveNfcInsightAndDone()" style="margin-bottom:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        Save &amp; close
+      </button>
+      <button class="modal-cancel" onclick="showNfcState('done')">Skip, I'm done</button>
+    </div>
+
+    <!-- STATE 4: Done summary -->
     <div class="nfc-state" id="nfc-state-done">
       <div style="font-size:13px;color:var(--sage);font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:6px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
@@ -567,11 +604,16 @@ html, body { height: 100%; background: var(--ink); font-family: var(--sans); }
 <div class="modal-overlay" id="book-modal">
   <div class="modal">
     <div class="modal-handle"></div>
-    <div class="modal-title">Change book</div>
-    <input class="book-form-input" type="text" id="book-title-input" placeholder="Book title" />
+    <div class="modal-title" id="book-modal-title">Add your first book</div>
+    <div style="position:relative;margin-bottom:10px;">
+      <input class="book-form-input" type="text" id="book-title-input"
+        placeholder="Start typing a book title..." autocomplete="off"
+        oninput="searchBooks(this.value)" style="margin-bottom:0;" />
+      <div id="book-suggestions" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);z-index:200;max-height:200px;overflow-y:auto;box-shadow:var(--shadow);"></div>
+    </div>
     <input class="book-form-input" type="text" id="book-author-input" placeholder="Author" />
     <input class="book-form-input" type="number" id="book-pages-input" placeholder="Total pages" />
-    <input class="book-form-input" type="number" id="book-page-input" placeholder="Current page" />
+    <input class="book-form-input" type="number" id="book-page-input" placeholder="Current page (where you are now)" />
     <button class="modal-btn" onclick="saveBook()">Save &amp; switch</button>
     <button class="modal-cancel" onclick="closeModal('book-modal')">Cancel</button>
   </div>
@@ -723,36 +765,63 @@ function toggleQR() {
   }
 }
 
-// NFC Modal
+// NFC Modal — full flow
+let nfcInsightType = 'quote';
+let nfcVoiceRecording = false;
+let nfcRecognition = null;
+
 function openNfcModal() {
-  if(!state.currentBook) {
-    openBookModal();
-    showToast('Add a book first');
-    return;
-  }
+  if(!state.currentBook) { openBookModal(); return; }
+  const modal = document.getElementById('nfc-modal');
   document.getElementById('nfc-book-title').textContent = state.currentBook.title;
+
   if(state.activeSession) {
+    // Already reading — show STOP state
     showNfcState('stop');
     document.getElementById('nfc-started-page-display').textContent = state.activeSession.startPage;
     document.getElementById('nfc-stop-page').value = '';
-    // Show human-readable start time, not a running clock
     const d = new Date(state.activeSession.startTime);
     const h = d.getHours(), m = d.getMinutes();
     const ampm = h >= 12 ? 'pm' : 'am';
-    const h12 = h % 12 || 12;
     document.getElementById('nfc-session-since').textContent =
-      'Started at ' + h12 + ':' + String(m).padStart(2,'0') + ' ' + ampm;
-    setTimeout(() => document.getElementById('nfc-stop-page').focus(), 300);
+      'Started at ' + (h%12||12) + ':' + String(m).padStart(2,'0') + ' ' + ampm;
+    setTimeout(() => document.getElementById('nfc-stop-page').focus(), 350);
   } else {
+    // Not reading — show START state with last page confirmation
     showNfcState('start');
-    document.getElementById('nfc-start-page').value = state.currentBook.currentPage || '';
-    setTimeout(() => { document.getElementById('nfc-start-page').focus(); document.getElementById('nfc-start-page').select(); }, 300);
+    const lastPage = state.currentBook.currentPage;
+    if(lastPage && lastPage > 1) {
+      document.getElementById('last-page-num').textContent = lastPage;
+      document.getElementById('last-page-confirm').style.display = 'block';
+      document.getElementById('nfc-start-page').style.display = 'none';
+      document.getElementById('nfc-start-page').value = lastPage;
+    } else {
+      document.getElementById('last-page-confirm').style.display = 'none';
+      document.getElementById('nfc-start-page').style.display = 'block';
+      document.getElementById('nfc-start-page').value = '';
+      setTimeout(() => document.getElementById('nfc-start-page').focus(), 350);
+    }
   }
-  document.getElementById('nfc-modal').classList.add('open');
+  modal.classList.add('open');
+}
+
+function confirmLastPage() {
+  // User confirms last page — hide confirm block, go straight to start
+  document.getElementById('last-page-confirm').style.display = 'none';
+  document.getElementById('nfc-start-page').style.display = 'block';
+  startSession();
+}
+
+function clearLastPage() {
+  // User wants to enter a different page
+  document.getElementById('last-page-confirm').style.display = 'none';
+  document.getElementById('nfc-start-page').style.display = 'block';
+  document.getElementById('nfc-start-page').value = '';
+  setTimeout(() => document.getElementById('nfc-start-page').focus(), 100);
 }
 
 function showNfcState(which) {
-  ['start','stop','done'].forEach(s =>
+  ['start','stop','insights','done'].forEach(s =>
     document.getElementById('nfc-state-'+s).classList.toggle('on', s===which)
   );
 }
@@ -763,7 +832,8 @@ function startSession() {
   state.activeSession = { startPage: page, startTime: Date.now() };
   state.currentBook.currentPage = page;
   save(); closeModal('nfc-modal'); startLiveTimer();
-  showToast('Session started at page ' + page); renderToday();
+  showToast('Session started at page ' + page);
+  renderToday();
 }
 
 function stopSession() {
@@ -773,7 +843,7 @@ function stopSession() {
   const elapsed = Math.floor((Date.now() - sess.startTime) / 1000);
   const elapsedMin = Math.max(1, Math.round(elapsed / 60));
   const pagesRead = Math.max(0, page - sess.startPage);
-  const wpPage = Math.round(state.currentBook.totalWords / state.currentBook.totalPages);
+  const wpPage = Math.round((state.currentBook.totalWords||80000) / state.currentBook.totalPages);
   const wordsRead = pagesRead * wpPage;
   const calcWpm = wordsRead > 0 && elapsed > 30 ? Math.round(wordsRead / (elapsed/60)) : 0;
 
@@ -781,26 +851,119 @@ function stopSession() {
   state.sessions[6] = (state.sessions[6]||0) + pagesRead;
   state.sessionMinutes[6] = (state.sessionMinutes[6]||0) + elapsedMin;
   if(calcWpm > 80 && calcWpm < 900) state.wpm = Math.round(state.wpm * 0.65 + calcWpm * 0.35);
+  state.streak = (state.streak||0) + (pagesRead > 0 ? 1 : 0);
   state.activeSession = null;
   state.pendingRecovery = null;
   save(); stopLiveTimer();
 
+  // Build summary text for insights screen
   const m = Math.floor(elapsed/60), s = elapsed%60;
+  document.getElementById('stop-summary-mini').innerHTML =
+    '📖 ' + pagesRead + ' pages &nbsp;·&nbsp; ⏱ ' + m + 'm ' + s + 's &nbsp;·&nbsp; p.' + sess.startPage + ' → p.' + page;
+
+  // Build full summary for done screen
   document.getElementById('session-summary-block').innerHTML = `
     <div class="ss-row"><span class="ss-label">Duration</span><span class="ss-val">${m}m ${s}s</span></div>
-    <div class="ss-row"><span class="ss-label">Pages read</span><span class="ss-val">${pagesRead} pages &nbsp;(${sess.startPage} → ${page})</span></div>
+    <div class="ss-row"><span class="ss-label">Pages read</span><span class="ss-val">${pagesRead} pages (p.${sess.startPage} → p.${page})</span></div>
     <div class="ss-row"><span class="ss-label">Words read</span><span class="ss-val">~${wordsRead.toLocaleString()}</span></div>
     <div class="ss-row"><span class="ss-label">Reading speed</span><span class="ss-val">${state.wpm} wpm</span></div>
   `;
-  showNfcState('done'); renderToday();
+
+  // Clear the insights capture for fresh entry
+  document.getElementById('nfc-insight-text').value = '';
+  document.getElementById('nfc-insight-page').value = page;
+  nfcInsightType = 'quote';
+  document.querySelectorAll('#nfc-state-insights .pill').forEach((p,i) => p.classList.toggle('on', i===0));
+
+  // Move to insights prompt
+  showNfcState('insights');
+  renderToday();
+}
+
+function selectNfcType(type, el) {
+  nfcInsightType = type;
+  document.querySelectorAll('#nfc-state-insights .pill').forEach(p => p.classList.remove('on'));
+  el.classList.add('on');
+}
+
+function saveNfcInsightAndDone() {
+  const text = document.getElementById('nfc-insight-text').value.trim();
+  if(text) {
+    const page = parseInt(document.getElementById('nfc-insight-page').value) || state.currentBook.currentPage;
+    const now = new Date();
+    const mo = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    state.insights.unshift({
+      id: Date.now(), type: nfcInsightType, text, page,
+      book: state.currentBook.title,
+      date: mo[now.getMonth()] + ' ' + now.getDate()
+    });
+    save(); showToast('Insight saved ✓');
+  }
+  showNfcState('done');
+  renderInsights('all');
+}
+
+function toggleNfcVoice() {
+  const btn = document.getElementById('nfc-voice-btn');
+  if(!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+    showToast('Voice not supported in this browser'); return;
+  }
+  if(nfcVoiceRecording) {
+    nfcRecognition && nfcRecognition.stop();
+    nfcVoiceRecording = false;
+    btn.classList.remove('recording');
+    btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;flex-shrink:0;"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg> Voice note';
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  nfcRecognition = new SR(); nfcRecognition.continuous = true; nfcRecognition.interimResults = true;
+  nfcRecognition.onresult = e => {
+    let t = ''; for(let i=0;i<e.results.length;i++) t+=e.results[i][0].transcript;
+    document.getElementById('nfc-insight-text').value = t;
+  };
+  nfcRecognition.start(); nfcVoiceRecording = true;
+  btn.classList.add('recording');
+  btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;flex-shrink:0;"><rect x="6" y="6" width="12" height="12"/></svg> Stop';
 }
 
 function justLogPage() {
   const page = parseInt(document.getElementById('nfc-start-page').value);
   if(!page || page < 1) { showToast('Enter a page number first'); return; }
-  state.currentBook.currentPage = page;
-  save(); renderToday(); closeModal('nfc-modal');
-  showToast('Page ' + page + ' logged ✓');
+  state.currentBook.currentPage = page; save(); renderToday();
+  closeModal('nfc-modal'); showToast('Page ' + page + ' logged ✓');
+}
+
+// Book search via Open Library API
+let searchTimeout = null;
+function searchBooks(query) {
+  const box = document.getElementById('book-suggestions');
+  clearTimeout(searchTimeout);
+  if(!query || query.length < 3) { box.style.display = 'none'; return; }
+  searchTimeout = setTimeout(async () => {
+    try {
+      const res = await fetch('https://openlibrary.org/search.json?title=' + encodeURIComponent(query) + '&limit=6&fields=title,author_name,number_of_pages_median,cover_i');
+      const data = await res.json();
+      const docs = data.docs || [];
+      if(!docs.length) { box.style.display = 'none'; return; }
+      box.style.display = 'block';
+      box.innerHTML = docs.map(d => `
+        <div onclick="selectBook(${JSON.stringify(d.title||'').replace(/"/g,'&quot;')},${JSON.stringify((d.author_name||[])[0]||'').replace(/"/g,'&quot;')},${d.number_of_pages_median||0})"
+          style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);font-size:13px;line-height:1.4;"
+          onmouseover="this.style.background='var(--cream)'" onmouseout="this.style.background='white'">
+          <div style="font-weight:500;color:var(--ink);">${d.title||'Unknown'}</div>
+          <div style="font-size:11px;color:var(--muted);">${(d.author_name||[])[0]||''}${d.number_of_pages_median?' · '+d.number_of_pages_median+' pages':''}</div>
+        </div>
+      `).join('');
+    } catch(e) { box.style.display = 'none'; }
+  }, 400);
+}
+
+function selectBook(title, author, pages) {
+  document.getElementById('book-title-input').value = title;
+  document.getElementById('book-author-input').value = author;
+  if(pages) document.getElementById('book-pages-input').value = pages;
+  document.getElementById('book-suggestions').style.display = 'none';
+  document.getElementById('book-page-input').focus();
 }
 
 // Nav
@@ -1022,6 +1185,9 @@ function showToast(msg){
 
 function renderAll(){renderToday();renderInsights('all');renderRecall();}
 
+// Stub — overridden by the Firebase module below once it loads
+window.initFirebase = function() {};
+
 // Read ?book= from URL — for per-book NFC tags
 function checkUrlParams() {
   const params = new URLSearchParams(window.location.search);
@@ -1042,7 +1208,8 @@ function checkUrlParams() {
 }
 
 window.onload=()=>{
-  initFirebase();
+  // Small delay lets the Firebase ES module register window.initFirebase before we call it
+  setTimeout(() => { if(window.initFirebase) window.initFirebase(); }, 100);
   if(state.user) launchApp();
 };
 </script>
@@ -1060,7 +1227,7 @@ window.onload=()=>{
   ══════════════════════════════════════════ -->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut }
+  import { getAuth, GoogleAuthProvider, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut }
     from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
   // ── FIREBASE CONFIG ──────────────────────────────────────────
@@ -1086,24 +1253,42 @@ window.onload=()=>{
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
 
-    // Expose signInGoogle to the global scope so the button can call it
     window.signInGoogle = async () => {
       try {
         const provider = new GoogleAuthProvider();
-        const result   = await signInWithPopup(auth, provider);
-        const user     = result.user;
-        const avatar   = (user.displayName || 'R').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-        state.user = {
-          name:   user.displayName || 'Reader',
-          email:  user.email,
-          avatar,
-          uid:    user.uid,
-          photo:  user.photoURL
-        };
-        // Show profile photo in avatar if available
-        if(user.photoURL) {
-          const av = document.getElementById('user-avatar');
-          av.style.backgroundImage = `url(${user.photoURL})`;
-          av.style.backgroundSize  = 'cover';
-          av.textContent = '';
-        
+        await signInWithRedirect(auth, provider);
+        // Page will redirect to Google and come back — handled by getRedirectResult below
+      } catch(err) {
+        showToast('Sign-in error: ' + (err.message || err.code));
+      }
+    };
+
+    // Handle the return from Google redirect
+    getRedirectResult(auth).then(result => {
+      if(result && result.user) {
+        const user = result.user;
+        const avatar = (user.displayName||'R').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        state.user = { name: user.displayName||'Reader', email: user.email, avatar, uid: user.uid, photo: user.photoURL||null };
+        save(); launchApp();
+      }
+    }).catch(err => {
+      if(err.code !== 'auth/no-current-user') showToast('Sign-in failed: ' + err.message);
+    });
+
+    // Handle sign-out
+    window.signOutGoogle = () => signOut(auth);
+
+    // Restore session if already signed in
+    onAuthStateChanged(auth, (user) => {
+      if(user && !state.user) {
+        const avatar = (user.displayName||'R').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+        state.user = { name: user.displayName||'Reader', email: user.email, avatar, uid: user.uid, photo: user.photoURL };
+        save(); launchApp();
+      }
+    });
+  }
+
+  window.initFirebase = initFirebase;
+</script>
+</body>
+</html>
